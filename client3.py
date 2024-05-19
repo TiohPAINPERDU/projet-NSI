@@ -4,16 +4,15 @@ from socket import socket, AF_INET, SOCK_STREAM
 import json
 import time
 
-time.time()
-
-
 limit = 10
 time_left = 60
+
 #----------------------------------------------------------------------------------------------
 
 client = socket(AF_INET, SOCK_STREAM)
 client.connect(('192.168.0.179', 25562))
 print("Connected to server")
+
 #----------------------------------------------------------------------------------------------
 
 def receive_data():
@@ -21,13 +20,15 @@ def receive_data():
         try:
             data = client.recv(10000).decode()
             if data:
-                if "MSG:" in data:
+                if data.startswith("MSG:"):
                     message = data[4:]
-                    chat_box.insert(tk.END, "Server: " + message + '\n')
+                    chat_box.insert(tk.END, "Other: " + message + '\n')
+                    if message == "Gagné":
+                        app.after(300, stop)
                 else:
                     pos = json.loads(data)
                     start_x, start_y, end_x, end_y = pos["start_x"], pos["start_y"], pos["end_x"], pos["end_y"]
-                    canvas.create_line(start_x, start_y, end_x, end_y,width=5)
+                    canvas.create_line(start_x, start_y, end_x, end_y, width=5)
         except Exception as e:
             print(f"Error receiving data: {e}")
             break
@@ -39,24 +40,22 @@ def send_message(event=None):
         client.send(("MSG:" + message).encode())
         user_input.delete(0, tk.END)
 
-
 def update_timer():
     global time_left
     if time_left > 0:
         time_left -= 1
         TimerL.config(text=f"Time left: {time_left}s")
-        app.after(1000, update_timer) 
+        app.after(1000, update_timer)
     elif time_left == 0:
-        chat_box.insert(tk.END, "Perduuuuu" + '\n') 
-        app.after(300, stop())   
+        chat_box.insert(tk.END, "Perduuuuu" + '\n')
+        app.after(500, stop)
 
 def stop():
+    time.sleep(2)
     app.quit()
 
-
-
-
 #----------------------------------------------------------------------------------------------
+
 app = tk.Tk()
 app.title("Client")
 
@@ -85,10 +84,11 @@ send_button.pack(side=tk.LEFT)
 
 canvas = tk.Canvas(app, width=1000, height=1000, bg="white")
 canvas.pack()
+
 #----------------------------------------------------------------------------------------------
+
 receive_thread = Thread(target=receive_data, daemon=True)
 receive_thread.start()
-
 
 update_timer()
 app.mainloop()

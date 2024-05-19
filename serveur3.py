@@ -3,15 +3,29 @@ from threading import Thread
 from socket import socket, AF_INET, SOCK_STREAM
 import random
 import json
+import time
 
 limit = 10
 time_left = 60 
 
-liste_mots = ["chat", "chien", "oiseau", "poipi", "voiture", "arbre"]
+liste_mots = [
+    "poussin", "licorne", "magicien", "pirate", "dinosaure", "robot", "super-héros", "alien", "sirène", "fantôme",
+    "dragon", "clown", "sorcière", "monstre", "chevalier", "vampire", "lutin", "yeti", "ninja", "cowboy",
+    "plombier", "professeur", "explorateur", "astronaute", "rockstar", "patineur", "chef cuisinier", "pompier",
+    "policier", "jardinier", "photographe", "scientifique", "bouddha", "zèbre", "kangourou", "baleine", "tortue",
+    "araignée", "hippopotame", "crocodile", "chameau", "dauphin", "pélican", "pingouin", "koala", "hamster",
+    "écureuil", "hérisson", "pandore", "sirène", "arc-en-ciel", "étoile filante", "igloo", "montagne russe",
+    "carrousel", "montgolfière", "fusée", "sous-marin", "skateboard", "trampoline", "machine à laver", "aspirateur",
+    "console de jeu", "télécommande", "parapluie", "trombone", "téléphone", "lanterne", "boîte à musique",
+    "globe terrestre", "thermomètre", "télescope", "bateau pirate", "hélicoptère", "traîneau", "lampe torche",
+    "perroquet", "chat botté", "petit chaperon rouge", "père noël", "bonhomme de neige", "sorbet", "sucette",
+    "chocolat chaud", "croissant", "gaufre", "crêpe", "macaron", "mousse au chocolat", "chausson aux pommes"
+]
+
 mot = random.choice(liste_mots)
 liste_co = []
 
- #-------------------------------------------ici---------------------------------------------------
+#----------------------------------------------------------------------------------------------
 def setup_server():
     server_socket = socket(AF_INET, SOCK_STREAM)
     server_socket.bind(('192.168.0.179', 25562))
@@ -19,22 +33,23 @@ def setup_server():
     client_socket, ip_address = server_socket.accept()
     print("Client connected from:", ip_address)
     return client_socket
+#----------------------------------------------------------------------------------------------
 client = setup_server()
-#---------------------------------------------------------------------------------------------------
+
 def receive_messages():
     while True:
         try:
             message = client.recv(1000).decode()
             if message:
-                if "MSG:" in message:
-                    chat_box.insert(tk.END, message[4:] + '\n')
+                if message.startswith("MSG:"):
+                    chat_box.insert(tk.END, "Other: " + message[4:] + '\n')
                     if message[4:] == mot:
-                        client.send("MSG:GAGNéééé".encode())
-                        app.after(30,stop())
+                        client.send("MSG:Gagné".encode())
+                        app.after(500, stop)
                 else:
                     pos = json.loads(message)
                     start_x, start_y, end_x, end_y = pos["start_x"], pos["start_y"], pos["end_x"], pos["end_y"]
-                    canvas.create_line(start_x, start_y, end_x, end_y)
+                    canvas.create_line(start_x, start_y, end_x, end_y, width=5)
                     liste_co.append((start_x, start_y, end_x, end_y))
         except Exception as e:
             print(f"Error receiving data: {e}")
@@ -54,26 +69,24 @@ def start_drawing(event):
 def draw(event):
     global start_x, start_y, end_x, end_y
     end_x, end_y = event.x, event.y
-    canvas.create_line(start_x, start_y, end_x, end_y,width=5)
+    canvas.create_line(start_x, start_y, end_x, end_y, width=5)
     pos = {"start_x": start_x, "start_y": start_y, "end_x": end_x, "end_y": end_y}
     client.send(json.dumps(pos).encode())
     start_x, start_y = end_x, end_y
-
-
 
 def update_timer():
     global time_left
     if time_left > 0:
         time_left -= 1
         TimerL.config(text=f"Time left: {time_left}s")
-        app.after(1000, update_timer)       
+        app.after(1000, update_timer)
     elif time_left == 0:
-        chat_box.insert(tk.END, "Perduuuuu" + '\n') 
-        app.after(300, stop())   
+        chat_box.insert(tk.END, "Perduuuuu" + '\n')
+        app.after(300, stop)
 
 def stop():
+    time.sleep(2)
     app.quit()
-
 
 #--------------------------------------------------------------------------------
 app = tk.Tk()
@@ -108,9 +121,9 @@ send_button.pack(side=tk.LEFT)
 canvas = tk.Canvas(app, width=1000, height=1000, bg="white")
 canvas.pack()
 
+canvas.bind("<ButtonPress-1>", start_drawing)
+canvas.bind("<B1-Motion>", draw)
 
-canvas.bind("<ButtonPress-1>", start_drawing)  
-canvas.bind("<B1-Motion>", draw)  
 #----------------------------------------------------------------------------------------------
 
 receive_thread = Thread(target=receive_messages, daemon=True)
